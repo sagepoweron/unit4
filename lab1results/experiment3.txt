@@ -1,0 +1,15 @@
+🤖 JavaScript LangChain Agent Starting...
+
+=== Embedding Inspector Lab ===
+
+Generating embeddings for three sentences...
+
+Sentence 1: "I like pizza."
+Sentence 2: "I really love eating delicious, hot pizza."
+Sentence 3: "Pizza is good."
+
+=== Embedding Vectors ===
+
+Cosine similarity between Sentence 1 and Sentence 2: 0.7053
+Cosine similarity between Sentence 2 and Sentence 3: 0.6040
+Cosine similarity between Sentence 3 and Sentence 1: 0.7605

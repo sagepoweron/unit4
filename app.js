@@ -46,16 +46,18 @@ async function main() {
       baseURL: "https://models.inference.ai.azure.com",
       apiKey: process.env.GITHUB_TOKEN,
     },
+    check_embedding_ctx_length: false, // Demonstrating failures
   });
 
   console.log("=== Embedding Inspector Lab ===\n");
   console.log("Generating embeddings for three sentences...\n");
 
   // Define the three test sentences
+
   const sentences = [
-    "The canine barked loudly.",
-    "The dog made a noise.",
-    "The electron spins rapidly."
+    "I like pizza.",
+    "I really love eating delicious, hot pizza.",
+    "Pizza is good."
   ];
 
   // Generate and display embeddings for each sentence

@@ -7,13 +7,18 @@
   "scripts": {
     "start": "node app.js"
   },
-  "keywords": ["ai", "agent", "langchain", "openai"],
+  "keywords": [
+    "ai",
+    "agent",
+    "langchain",
+    "openai"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "langchain": "^0.3.0",
-    "@langchain/openai": "^0.3.0",
     "@langchain/community": "^0.3.0",
-    "dotenv": "^16.4.5"
+    "@langchain/openai": "^0.3.17",
+    "dotenv": "^16.4.5",
+    "langchain": "^0.3.0"
   }
 }
