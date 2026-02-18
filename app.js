@@ -1,5 +1,6 @@
 import { OpenAIEmbeddings } from "@langchain/openai";
 import dotenv from "dotenv";
+import MemoryVectorStore from "@langchain/community/vectorstores/memory";
 
 // Load environment variables
 dotenv.config();
@@ -49,16 +50,37 @@ async function main() {
     check_embedding_ctx_length: false, // Demonstrating failures
   });
 
+  // Create a MemoryVectorStore instance
+  const vectorStore = MemoryVectorStore.fromTexts([], embeddings);
+
   console.log("=== Embedding Inspector Lab ===\n");
-  console.log("Generating embeddings for three sentences...\n");
 
   // Define the three test sentences
-
   const sentences = [
     "I like pizza.",
     "I really love eating delicious, hot pizza.",
     "Pizza is good."
   ];
+
+  // Add sentences to the vector store with metadata
+  const documents = sentences.map((sentence, index) => ({
+    text: sentence,
+    metadata: {
+      createdAt: new Date().toISOString(),
+      index: index
+    }
+  }));
+
+  await vectorStore.addDocuments(documents);
+
+  console.log(`✅ Successfully stored ${documents.length} sentences in the vector store.`);
+  console.log("Stored sentences:");
+  sentences.forEach((sentence, index) => {
+    console.log(`${index + 1}: ${sentence}`);
+  });
+
+  console.log("=== Embedding Inspector Lab ===\n");
+  console.log("Generating embeddings for three sentences...\n");
 
   // Generate and display embeddings for each sentence
   const vectors = [];
@@ -85,6 +107,26 @@ async function main() {
   console.log("- Sentence 3 (about electrons) will differ significantly from sentences 1 and 2");
   console.log("\nThis demonstrates that 'AI embeddings' are simply numerical vectors,");
   console.log("not magic—they represent semantic meaning as coordinates in high-dimensional space.");
+
+  // Function to search sentences in the vector store
+  async function searchSentences(vectorStore, query, k = 3) {
+    // Perform similarity search with scores
+    const results = await vectorStore.similaritySearchWithScore(query, k);
+
+    // Print the results
+    console.log(`\n🔍 Search Results for query: "${query}"`);
+    results.forEach(([document, score], index) => {
+      console.log(`${index + 1}. [Score: ${score.toFixed(4)}] ${document.text}`);
+    });
+
+    // Return the top k results
+    return results;
+  }
+
+  console.log("\n🔍 Search Results:");
+  searchSentences(vectorStore, "I like pizza.");
+  searchSentences(vectorStore, "I really love eating delicious, hot pizza.");
+  searchSentences(vectorStore, "Pizza is good.");
 }
 
 main().catch(console.error);
