@@ -1,6 +1,7 @@
 import { OpenAIEmbeddings } from "@langchain/openai";
 import dotenv from "dotenv";
-import MemoryVectorStore from "@langchain/community/vectorstores/memory";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import readline from "readline";
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,12 @@ function cosineSimilarity(vectorA, vectorB) {
 async function main() {
   console.log("🤖 JavaScript LangChain Agent Starting...\n");
 
+  // Initialize embeddings model
+  const embeddings = new OpenAIEmbeddings();
+
+  // Create MemoryVectorStore instance
+  const vectorStore = await MemoryVectorStore.fromTexts([], [], embeddings);
+
   // Check for GitHub token
   if (!process.env.GITHUB_TOKEN) {
     console.error("❌ Error: GITHUB_TOKEN not found in environment variables.");
@@ -40,64 +47,44 @@ async function main() {
     process.exit(1);
   }
 
-  // Initialize the embedding model with GitHub Models
-  const embeddings = new OpenAIEmbeddings({
-    modelName: "text-embedding-3-small",
-    configuration: {
-      baseURL: "https://models.inference.ai.azure.com",
-      apiKey: process.env.GITHUB_TOKEN,
-    },
-    check_embedding_ctx_length: false, // Demonstrating failures
-  });
-
-  // Create a MemoryVectorStore instance
-  const vectorStore = MemoryVectorStore.fromTexts([], embeddings);
-
-  console.log("=== Embedding Inspector Lab ===\n");
-
-  // Define the three test sentences
-  const sentences = [
-    "I like pizza.",
-    "I really love eating delicious, hot pizza.",
-    "Pizza is good."
-  ];
-
-  // Add sentences to the vector store with metadata
-  const documents = sentences.map((sentence, index) => ({
-    text: sentence,
-    metadata: {
-      createdAt: new Date().toISOString(),
-      index: index
-    }
-  }));
-
-  await vectorStore.addDocuments(documents);
-
-  console.log(`✅ Successfully stored ${documents.length} sentences in the vector store.`);
-  console.log("Stored sentences:");
-  sentences.forEach((sentence, index) => {
-    console.log(`${index + 1}: ${sentence}`);
-  });
-
   console.log("=== Embedding Inspector Lab ===\n");
   console.log("Generating embeddings for three sentences...\n");
 
-  // Generate and display embeddings for each sentence
-  const vectors = [];
-  for (let i = 0; i < sentences.length; i++) {
-    console.log(`Sentence ${i + 1}: "${sentences[i]}"`);
-    
-    // Generate embedding
-    const embedding = await embeddings.embedQuery(sentences[i]);
-    vectors.push(embedding);
-  }
+  // Define the three test sentences
+  const sentences = [
+    "The canine barked loudly.",
+    "The dog made a noise.",
+    "The electron spins rapidly."
+  ];
+
+  // Add sentences to vector store with metadata
+  await vectorStore.addDocuments(
+    sentences.map((text, index) => ({
+      pageContent: text,
+      metadata: {
+        createdAt: new Date().toISOString(),
+        index,
+      },
+    }))
+  );
+
+  // Print confirmation message
+  console.log(`✅ Successfully stored ${sentences.length} sentences in the vector store.`);
+
+  // Print each sentence that was added
+  sentences.forEach((sentence, index) => {
+    console.log(`Sentence ${index + 1}: ${sentence}`);
+  });
 
   // Show the distances between the embeddings
   console.log("\n=== Embedding Vectors ===\n");
-  for (let i = 0; i < vectors.length; i++) {
+  for (let i = 0; i < sentences.length; i++) {
     const current = i;
-    const next = (i + 1) % vectors.length;
-    const similarity = cosineSimilarity(vectors[current], vectors[next]);
+    const next = (i + 1) % sentences.length;
+    const similarity = cosineSimilarity(
+      vectorStore.getVector(current),
+      vectorStore.getVector(next)
+    );
     console.log(`Cosine similarity between Sentence ${current + 1} and Sentence ${next + 1}: ${similarity.toFixed(4)}`);
   }
 
@@ -110,23 +97,54 @@ async function main() {
 
   // Function to search sentences in the vector store
   async function searchSentences(vectorStore, query, k = 3) {
-    // Perform similarity search with scores
+    // Perform similarity search
     const results = await vectorStore.similaritySearchWithScore(query, k);
 
     // Print the results
-    console.log(`\n🔍 Search Results for query: "${query}"`);
+    console.log("\n=== Search Results ===\n");
     results.forEach(([document, score], index) => {
-      console.log(`${index + 1}. [Score: ${score.toFixed(4)}] ${document.text}`);
+      console.log(
+        `Rank ${index + 1}:\n` +
+        `  Similarity Score: ${score.toFixed(4)}\n` +
+        `  Sentence: ${document.text}\n`
+      );
     });
 
     // Return the top k results
     return results;
   }
 
-  console.log("\n🔍 Search Results:");
-  searchSentences(vectorStore, "I like pizza.");
-  searchSentences(vectorStore, "I really love eating delicious, hot pizza.");
-  searchSentences(vectorStore, "Pizza is good.");
+  // Example search
+  console.log("\n=== Example Search ===\n");
+  searchSentences(vectorStore, "The dog made a noise.");
+
+  console.log("\n=== Semantic Search ===\n");
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const promptUser = async () => {
+    rl.question("Enter a search query (or 'quit' to exit): ", async (input) => {
+      const query = input.trim();
+
+      if (query.toLowerCase() === "quit" || query.toLowerCase() === "exit") {
+        console.log("Goodbye! 👋");
+        rl.close();
+        process.exit(0);
+      } else if (!query) {
+        console.log("Please enter a valid query.\n");
+        return promptUser();
+      }
+
+      const results = await searchSentences(vectorStore, query);
+      console.log("\n");
+      return promptUser();
+    });
+  };
+
+  await promptUser();
 }
 
 main().catch(console.error);
